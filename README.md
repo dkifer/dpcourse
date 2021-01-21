@@ -1,2 +1,2 @@
 # dpcourse
-In class code for differential privacy course
+In class code for Penn State differential privacy course
