@@ -42,7 +42,31 @@ function fit(datashape, info::Array{Tuple{Q, A, F}}; nonneg=false) where {Q <: Q
     end
     @objective(model, Min, obj)
     optimize!(model)
-    value.(x)
+    reshape(value.(x), datashape)
+end
+
+
+function mwem(queries, T, data, epsilon)
+    datashape = size(data)
+    synthdata = zeros(datashape...)
+    sensitivity = maximum([sens(q) for q in queries])
+    info = Nothing
+    for i in 1:T
+        epsilon_round = epsilon/T
+        epsilon_select = epsilon_round/2
+        epsilon_measure = epsilon_round/2
+        errors = [sum(abs, answer(q, data) - answer(q, synthdata)) for q in queries]
+        worst_query_id = noisy_max(errors, sensitivity=sensitivity, epsilon=epsilon_select)
+        worst_query = queries[worst_query_id]
+        worst_query_answer = protect(worst_query, data, epsilon_measure)
+        if info == Nothing
+            info = [(worst_query, worst_query_answer, 1.0)]
+        else
+            info = cat(info, (worst_query, worst_query_answer, 1.0), dims=1)
+        end
+        synthdata = fit(datashape, info, nonneg=true)
+    end
+    synthdata
 end
 
 end # end module

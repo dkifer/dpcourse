@@ -39,8 +39,7 @@ function example_marginal(epsi=3.0)
     dp2 = DP.laplace_mechanism(answer2, sensitivity=DP.sens(q2), epsilon=epsi/3)
     dp3 = DP.laplace_mechanism(answer3, sensitivity=DP.sens(q3), epsilon=epsi/3)
 
-    tmphist = DP.fit(datashape, [(q1, dp1, 1.0), (q2, dp2, 1.0), (q3, dp3, 1.0)])
-    dphist = reshape(tmphist, datashape)
+    dphist = DP.fit(datashape, [(q1, dp1, 1.0), (q2, dp2, 1.0), (q3, dp3, 1.0)])
 
     for (i, q) in enumerate([q1, q2, q3])
         println("####################")
@@ -53,4 +52,36 @@ function example_marginal(epsi=3.0)
         show(round.(DP.answer(q, dphist), digits=3))
         println()
     end
+end
+
+sqerror(x::Number, y::Number) = (x-y)^2
+sqerror(x::Array, y::Array) = sum(a -> a^2, x-y)
+
+function evaluate_strategy(workload, strategy, d, data, epsilon)
+    noisy_data = DP.protect(strategy, data, epsilon)
+    mean([sqerror(DP.answer(q, data), DP.answer(q, noisy_data)) for q in workload])
+end
+
+function evaluate_mwem(workload, T, data, epsilon)
+    noisy_data = DP.mwem(workload, T, data, epsilon)
+    mean([sqerror(DP.answer(q, data), DP.answer(q, noisy_data)) for q in workload])
+end
+
+function example_range(epsilon=2, T=3, amount=1000)
+    data = getfrank()[1:200]
+    d = length(data)
+
+    rangequeries = DP.all_range_queries(d)
+    idquery = DP.IDQuery()
+    error_id = mean([evaluate_strategy(rangequeries, idquery, d, data, epsilon) for _ in amount])
+
+    tree = DP.tree_queries(d)
+    error_tree = mean([evaluate_strategy(rangequeries, tree, d, data, epsilon) for _ in amount])
+
+    error_mwem = mean([evaluate_mwem(rangequeries, T, data, epsilon) for _ in amount])
+
+    println("#### Results: ####")
+    println("ID Query mean squared error: ", error_id)
+    println("Range Query mean squared error: ", error_tree)
+    println("MWEM mean squared error: ", error_mwem)
 end

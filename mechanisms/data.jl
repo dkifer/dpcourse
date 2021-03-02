@@ -9,3 +9,4 @@ using NPZ
 getincome() = npzread("data/INCOME.n4096.npy")
 getnet() = npzread("data/NETTRACE.n4096.npy")
 getsearch() = npzread("data/SEARCHLOGS.n4096.npy")
+getfrank() = npzread("data/ADULTFRANK.n4096.npy")
