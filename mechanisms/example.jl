@@ -6,10 +6,20 @@ function example_iso1(epsi=0.5)
     data = [100, 1, 0, 0, 3, 5, 0, 99, 0, 0]
     sorted_data = sort(data)
     noisy_data = DP.laplace_mechanism(sorted_data, sensitivity=1, epsilon=epsi)
-#    dpdata = DP.isotonic(noisy_data)
+    postprocessed1 = sort(noisy_data)
+    dpdata = DP.isotonic(noisy_data)
     println("Sorted: ", sorted_data)
     println("Noisy: ", round.(noisy_data, digits=3))
-#    println("Postprocessed: ", round.(dpdata, digits=3))
+    println("Sorting the noisy data: ", round.(postprocessed1, digits=3))
+    println("Isotonic regression: ", round.(dpdata, digits=3))
+    # this is not very sorted now
+    error_noisy_data = sum(x -> x^2, sorted_data - noisy_data)
+    error_sorted = sum(x -> x^2, sorted_data - postprocessed1)
+    error_isotonic = sum(x -> x^2, sorted_data - dpdata)
+    println("Error of noisy data: ", error_noisy_data)
+    println("Error of sorted noisy data: ", error_sorted)
+    println("Error of isotonic: ", error_isotonic)
+
 end
 
 mean(x::Array) = sum(x)/length(x)
@@ -58,7 +68,8 @@ sqerror(x::Number, y::Number) = (x-y)^2
 sqerror(x::Array, y::Array) = sum(a -> a^2, x-y)
 
 function evaluate_strategy(workload, strategy, d, data, epsilon)
-    noisy_data = DP.protect(strategy, data, epsilon)
+    noisy_answers = DP.protect(strategy, data, epsilon)
+    noisy_data = DP.fit(size(data), [(strategy, noisy_answers, 1.0)])
     mean([sqerror(DP.answer(q, data), DP.answer(q, noisy_data)) for q in workload])
 end
 
@@ -67,7 +78,7 @@ function evaluate_mwem(workload, T, data, epsilon)
     mean([sqerror(DP.answer(q, data), DP.answer(q, noisy_data)) for q in workload])
 end
 
-function example_range(epsilon=2, T=3, amount=1000)
+function example_range(epsilon=2, T=3, amount=100000)
     data = getfrank()[1:200]
     d = length(data)
 
@@ -75,13 +86,13 @@ function example_range(epsilon=2, T=3, amount=1000)
     idquery = DP.IDQuery()
     error_id = mean([evaluate_strategy(rangequeries, idquery, d, data, epsilon) for _ in amount])
 
-    tree = DP.tree_queries(d)
+    tree = DP.tree_queries(d, numsplits=100)
     error_tree = mean([evaluate_strategy(rangequeries, tree, d, data, epsilon) for _ in amount])
 
-    error_mwem = mean([evaluate_mwem(rangequeries, T, data, epsilon) for _ in amount])
+    #error_mwem = mean([evaluate_mwem(rangequeries, T, data, epsilon) for _ in amount])
 
     println("#### Results: ####")
     println("ID Query mean squared error: ", error_id)
     println("Range Query mean squared error: ", error_tree)
-    println("MWEM mean squared error: ", error_mwem)
+    #println("MWEM mean squared error: ", error_mwem)
 end
