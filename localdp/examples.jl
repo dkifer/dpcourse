@@ -52,7 +52,7 @@ end
 
 function perturb(r::UnaryReport, epsilon)
    r.perturbed = map(r.encoded) do d
-      [randomized_response(x, epsilon) for x in d]
+      [randomized_response(x, epsilon/2) for x in d]
    end
    r
 end
